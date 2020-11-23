@@ -9,8 +9,9 @@ struct Node {
 
 class Network {
    public:
-    void loadStateFromFile(const std::string& path);
-		void exportStateToFile(const std::string& path) const;
+    void loadFromFile(const std::string& path);
+		void exportToFile(const std::string& path) const;
+		std::string exportState() const;
 		void randomizeNetwork(unsigned int numNodes, unsigned int minConnections, unsigned int maxConnections);
     void step();
 		friend std::ostream& operator << (std::ostream& out, const Network& network);
