@@ -13,10 +13,13 @@ const char sectSepChar = '-';
 const unsigned int sectSepCharRepeat = 10;
 const char stateDelim = ',';
 
+const std::runtime_error readStateExcept("Error reading initial state");
+const std::runtime_error readConnExcept("Error reading connections");
+
 bool defaultTransformer(const Node& node, const std::vector<Node>& nodes) {
 	bool state = node.state;
 	for (const auto& otherNodeI : node.connectedNodes) {
-		state &= nodes[otherNodeI].state;
+		state ^= nodes[otherNodeI].state;
 	}
 	return state;
 }
@@ -75,7 +78,7 @@ void Network::loadFromFile(const std::string& path) {
 	std::ifstream inFile;
 	inFile.open(path);
 	if (inFile.fail()) {
-		throw std::logic_error("Error opening file");
+		throw std::runtime_error("Error opening file");
 	}
 	int numNodes;
 	inFile >> numNodes;
@@ -88,15 +91,15 @@ void Network::loadFromFile(const std::string& path) {
 		inFile >> num;
 		// File starts counting from 1
 		if ((num - 1) != i) {
-			throw std::logic_error("Error reading initial states");
+			throw readStateExcept;
 		}
 		inFile >> assignChar;
 		if (assignChar != nodeIDelim) {
-			throw std::logic_error("Error reading initial states");
+			throw readStateExcept;
 		}
 		inFile >> num;
 		if (!inFile.good()) {
-			throw std::logic_error("Error reading initial states");
+			throw readStateExcept;
 		}
 		newNodes[i].state = (num == 1);
 	}
@@ -106,7 +109,7 @@ void Network::loadFromFile(const std::string& path) {
 		std::getline(inFile, stateConnBorder);
 	} while (stateConnBorder == "");
 	if (stateConnBorder[0] != sectSepChar) {
-		throw std::logic_error("Error reading file");
+		throw std::runtime_error("Error reading file");
 	}
 	
 
@@ -119,11 +122,18 @@ void Network::loadFromFile(const std::string& path) {
 		inFile >> num;
 		// File starts counting from 1
 		if ((num - 1) != i) {
-			throw std::logic_error("Error reading initial states");
+			std::string errMessage("Error reading connections: Invalid node index number.");
+			errMessage.append("Expected ").append(std::to_string(i + 1)).append(" but got ").append(std::to_string(num));
+			throw std::runtime_error("Error reading connections: Invalid node index number");
 		}
 		inFile >> assignChar;
 		if (assignChar != nodeIDelim) {
-			throw std::logic_error("Error reading initial states");
+			std::string errMessage("Error reading connections: Expected a '");
+			errMessage.push_back(nodeIDelim);
+			errMessage.append("' but got a '");
+			errMessage.push_back(assignChar);
+			errMessage.push_back('\'');
+			throw std::runtime_error(errMessage);
 		}
 		while (true) {
 			inFile >> num;
@@ -186,7 +196,7 @@ void Network::exportToFile(const std::string& path) const {
 	outFile.open(path);
 
 	if (outFile.fail()) {
-		throw std::logic_error("Error opening file");
+		throw std::runtime_error("Error opening file");
 	}
 
 	outFile << exportState();
