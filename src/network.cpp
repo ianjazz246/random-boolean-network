@@ -7,22 +7,28 @@
 #include <algorithm>
 
 // Character that follows the node index, before the node state/connections
-const char nodeIDelim = ':';
+constexpr char nodeIDelim = ':';
 // Character to use, repeated, as a divider between the states and connections
-const char sectSepChar = '-';
-const unsigned int sectSepCharRepeat = 10;
-const char stateDelim = ',';
+constexpr char sectSepChar = '-';
+// Times to repeat sectSepChar to form boundary line between node states and node connections
+constexpr unsigned int sectSepCharRepeat = 10;
+// Character to deliminate between connection indices
+constexpr char stateDelim = ',';
 
+// Considered using constexpr, but giving error in MSVC 2019 ??
 const std::runtime_error readStateExcept("Error reading initial state");
 const std::runtime_error readConnExcept("Error reading connections");
 
-bool defaultTransformer(const Node& node, const std::vector<Node>& nodes) {
-	bool state = node.state;
-	for (const auto& otherNodeI : node.connectedNodes) {
-		state ^= nodes[otherNodeI].state;
+namespace Transformers {
+	bool defaultTransformer(const Node& node, const std::vector<Node>& originalNodes) {
+		bool state = node.state;
+		for (const auto& otherNodeI : node.connectedNodes) {
+			state ^= originalNodes[otherNodeI].state;
+		}
+		return state;
 	}
-	return state;
 }
+
 
 Network::Network(bool (*transformer)(const Node&, const std::vector<Node>&),
 	std::string onString, std::string offString) :
@@ -30,7 +36,7 @@ Network::Network(bool (*transformer)(const Node&, const std::vector<Node>&),
 	{}
 
 Network::Network(std::string onString, std::string offString) :
-	transformer(defaultTransformer), onString(onString), offString(offString)
+	transformer(Transformers::defaultTransformer), onString(onString), offString(offString)
 	{}
 
 // For now, minConnections is ignored. The network will always have maxConnections connections
@@ -41,7 +47,7 @@ void Network::randomizeNetwork(unsigned int numNodes, unsigned int minConnection
 	if (minConnections > maxConnections) {
 		throw std::invalid_argument("minConnections must be less than maxConnections");
 	}
-
+ 
 	std::random_device rd;
 	std::mt19937 rng(rd());
 	std::uniform_int_distribution<std::mt19937::result_type> boolDist(0, 1);
@@ -89,7 +95,7 @@ void Network::loadFromFile(const std::string& path) {
 		int num;
 		char assignChar;
 		inFile >> num;
-		// File starts counting from 1
+		// File starts counting from 1, so -1
 		if ((num - 1) != i) {
 			throw readStateExcept;
 		}
@@ -119,6 +125,7 @@ void Network::loadFromFile(const std::string& path) {
 		char assignChar;
 		char delim;
 
+		// Get index of main node
 		inFile >> num;
 		// File starts counting from 1
 		if ((num - 1) != i) {
@@ -135,9 +142,11 @@ void Network::loadFromFile(const std::string& path) {
 			errMessage.push_back('\'');
 			throw std::runtime_error(errMessage);
 		}
+		// Get every number (index of connection) after colon, expected to be delimanted by stateDelim
 		while (true) {
 			inFile >> num;
-			newNodes[i].connectedNodes.push_back(num);
+			// -1 because file starts counting from 1. Program counts from 0
+			newNodes[i].connectedNodes.push_back(num - 1);
 			inFile >> delim;
 			if (inFile.eof()) {
 				// Reached end of file
@@ -177,8 +186,10 @@ std::string Network::exportState() const {
 		output.append(std::to_string(i + 1));
 		output.push_back(nodeIDelim);
 		output.push_back(' ');
+		// Add each index of connection
 		for (size_t j = 0; j < connectedNodes.size(); ++j) {
-			output.append(std::to_string(connectedNodes[j]));
+			// +1 because file starts counting from 1. Program counts from 0
+			output.append(std::to_string(connectedNodes[j] + 1));
 			if (j != connectedNodes.size() - 1) {
 				output.push_back(stateDelim);
 				output.push_back(' ');
@@ -203,10 +214,15 @@ void Network::exportToFile(const std::string& path) const {
 }
 
 void Network::step() {
+	auto newNodes = nodes;
+
 	// To be passed to transformer function
-	for (auto& node : nodes) {
+	for (auto& node : newNodes) {
 		node.state = transformer(node, nodes);
 	}
+
+	using std::swap;
+	swap(newNodes, nodes);
 }
 
 std::ostream& operator << (std::ostream& out, const Network& network) {
