@@ -1,4 +1,5 @@
 #include "network.h"
+#include "networkEvaluators.h"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -19,24 +20,13 @@ constexpr char stateDelim = ',';
 const std::runtime_error readStateExcept("Error reading initial state");
 const std::runtime_error readConnExcept("Error reading connections");
 
-namespace Transformers {
-	bool defaultTransformer(const Node& node, const std::vector<Node>& originalNodes) {
-		bool state = node.state;
-		for (const auto& otherNodeI : node.connectedNodes) {
-			state ^= originalNodes[otherNodeI].state;
-		}
-		return state;
-	}
-}
-
-
 Network::Network(bool (*transformer)(const Node&, const std::vector<Node>&),
 	std::string onString, std::string offString) :
 	transformer(transformer), onString(onString), offString(offString)
 	{}
 
 Network::Network(std::string onString, std::string offString) :
-	transformer(Transformers::defaultTransformer), onString(onString), offString(offString)
+	transformer(NetworkEvaluators::evaluators.cbegin()->second), onString(onString), offString(offString)
 	{}
 
 // For now, minConnections is ignored. The network will always have maxConnections connections
