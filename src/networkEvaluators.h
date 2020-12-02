@@ -1,7 +1,8 @@
 #pragma once
-#include "network.h"
+#include "node.h"
 #include <functional>
-#include <map>
+#include <unordered_map>
+
 namespace NetworkEvaluators {
 	bool XorEvaluator(const Node& node, const std::vector<Node>& allNodes) {
 		bool state = node.state;
@@ -16,7 +17,6 @@ namespace NetworkEvaluators {
 			state &= allNodes[connI].state;
 		}
 		return state;
-		
 	}
 	bool OrEvaluator(const Node& node, const std::vector<Node>& allNodes) {
 		bool state = node.state;
@@ -26,11 +26,13 @@ namespace NetworkEvaluators {
 		return state;
 	}
 
-	const std::map<
+	const std::unordered_map<
 		std::string, bool (*)(const Node&,const std::vector<Node>&)
 	> evaluators = {
 		{"xor", NetworkEvaluators::XorEvaluator},
 		{"and", NetworkEvaluators::AndEvaluator},
 		{"or", NetworkEvaluators::OrEvaluator}
 	};
+
+	const std::string defaultEvaluatorName = "xor";
 }

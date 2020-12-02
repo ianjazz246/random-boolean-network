@@ -1,6 +1,5 @@
 #include "network.h"
 #include "networkEvaluators.h"
-#include <string>
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -20,13 +19,15 @@ constexpr char stateDelim = ',';
 const std::runtime_error readStateExcept("Error reading initial state");
 const std::runtime_error readConnExcept("Error reading connections");
 
-Network::Network(bool (*transformer)(const Node&, const std::vector<Node>&),
+constexpr auto defaultEvaluator = NetworkEvaluators::XorEvaluator;
+
+Network::Network(std::string evalName,
 	std::string onString, std::string offString) :
-	transformer(transformer), onString(onString), offString(offString)
+	evaluatorName(evalName), onString(onString), offString(offString)
 	{}
 
 Network::Network(std::string onString, std::string offString) :
-	transformer(NetworkEvaluators::evaluators.cbegin()->second), onString(onString), offString(offString)
+	evaluatorName(NetworkEvaluators::defaultEvaluatorName), onString(onString), offString(offString)
 	{}
 
 // For now, minConnections is ignored. The network will always have maxConnections connections
@@ -53,11 +54,12 @@ void Network::randomizeNetwork(unsigned int numNodes, unsigned int minConnection
 
 	for (auto& node : newNodes) {
 		node.state = boolDist(rng) == 1;
-		node.connectedNodes = std::vector<unsigned int>(maxConnections);	
+		node.connectedNodes = std::vector<unsigned int>();
+		node.connectedNodes.reserve(maxConnections);
 		
 		// Fisher-Yates algorithm
 		for (unsigned int i = 0; i < maxConnections; ++i) {
-			std::uniform_int_distribution<std::mt19937::result_type> randConnDist(i, numNodes);
+			std::uniform_int_distribution<std::mt19937::result_type> randConnDist(i, numNodes - 1);
 			unsigned int randIndex = randConnDist(rng);
 			node.connectedNodes.push_back(possibleConnections[randIndex]);
 			// Swap selected element into "struck out position", taking element there into pool
@@ -65,8 +67,9 @@ void Network::randomizeNetwork(unsigned int numNodes, unsigned int minConnection
 		}
 	}
 
-	using std::swap;
+	evaluatorName = NetworkEvaluators::defaultEvaluatorName;
 
+	using std::swap;
 	swap(nodes, newNodes);
 }
 
@@ -76,9 +79,18 @@ void Network::loadFromFile(const std::string& path) {
 	if (inFile.fail()) {
 		throw std::runtime_error("Error opening file");
 	}
+	// Read number of nodes in network
 	int numNodes;
 	inFile >> numNodes;
 	std::vector<Node> newNodes(numNodes);
+
+	std::string newEvaluatorName;
+	std::getline(inFile, newEvaluatorName);
+	if (NetworkEvaluators::evaluators.count(newEvaluatorName) != 1) {
+		std::string err = "Invalid evaluator name: ";
+		err.append(newEvaluatorName);
+		throw std::runtime_error(err);
+	}
 	
 	// Read states
 	for (int i = 0; i < numNodes; ++i) {
@@ -149,16 +161,23 @@ void Network::loadFromFile(const std::string& path) {
 		}
 	}
 
+	evaluatorName = newEvaluatorName;
 	using std::swap;
 	swap(newNodes, nodes);
+
 
 	inFile.close();
 }
 
 std::string Network::exportState() const {
 	std::string output;
+	// Number of nodes in network
 	output.append(std::to_string(nodes.size()));
 	output.push_back('\n');
+	// Evaluator function name;
+	output.append(evaluatorName);
+	output.push_back('\n');
+	// Node states
 	for (size_t i = 0; i < nodes.size(); ++i) {
 		output.append(std::to_string(i + 1));
 		output.push_back(nodeIDelim);
@@ -206,9 +225,9 @@ void Network::exportToFile(const std::string& path) const {
 void Network::step() {
 	auto newNodes = nodes;
 
-	// To be passed to transformer function
+	bool (*evaluator)(const Node&, const std::vector<Node>&) = NetworkEvaluators::evaluators.find(evaluatorName)->second;
 	for (auto& node : newNodes) {
-		node.state = transformer(node, nodes);
+		node.state = evaluator(node, nodes);
 	}
 
 	using std::swap;

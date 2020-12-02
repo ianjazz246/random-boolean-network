@@ -11,11 +11,12 @@ int main(int argc, char** argv) {
 	//net.randomizeNetwork(10, 2, 2);
 
 	try {
-		std::cout << "Loading network state from file" << argv[1] << '\n';
 		if (argc > 1) {
+			std::cout << "Loading network state from file" << argv[1] << '\n';
 			std::cout << argv[1] << '\n';
 			net.loadFromFile(argv[1]);
 		} else {
+			std::cout << "Creating randomized network" << '\n';
 			net.randomizeNetwork(10, 1, 1);
 		}
 	} catch(const std::runtime_error& e) {
