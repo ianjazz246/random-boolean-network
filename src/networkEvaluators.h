@@ -18,6 +18,13 @@ namespace NetworkEvaluators {
 		}
 		return state;
 	}
+	bool NandEvaluator(const Node& node, const std::vector<Node>& allNodes) {
+		bool state = node.state;
+		for (const auto& connI : node.connectedNodes) {
+			state = !(allNodes[connI].state & state);
+		}
+		return state;
+	}
 	bool OrEvaluator(const Node& node, const std::vector<Node>& allNodes) {
 		bool state = node.state;
 		for (const auto& connI : node.connectedNodes) {
@@ -25,14 +32,16 @@ namespace NetworkEvaluators {
 		}
 		return state;
 	}
+	
 
 	const std::unordered_map<
 		std::string, bool (*)(const Node&,const std::vector<Node>&)
 	> evaluators = {
 		{"xor", NetworkEvaluators::XorEvaluator},
 		{"and", NetworkEvaluators::AndEvaluator},
+		{"nand", NetworkEvaluators::NandEvaluator},
 		{"or", NetworkEvaluators::OrEvaluator}
 	};
 
-	const std::string defaultEvaluatorName = "xor";
+	const std::string defaultEvaluatorName = "nand";
 }

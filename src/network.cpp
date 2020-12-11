@@ -65,6 +65,7 @@ void Network::randomizeNetwork(unsigned int numNodes, unsigned int minConnection
 			// Swap selected element into "struck out position", taking element there into pool
 			std::iter_swap(possibleConnections.begin() + randIndex, possibleConnections.begin() + i);
 		}
+		// No need to reset shuffled vector of possible Connections
 	}
 
 	evaluatorName = NetworkEvaluators::defaultEvaluatorName;

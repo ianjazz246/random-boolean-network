@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
 			net.loadFromFile(argv[1]);
 		} else {
 			std::cout << "Creating randomized network" << '\n';
+			// Create network with 10 nodes, 1 connection each node
 			net.randomizeNetwork(10, 1, 1);
 		}
 	} catch(const std::runtime_error& e) {
