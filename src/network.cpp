@@ -86,7 +86,7 @@ void Network::loadFromFile(const std::string& path) {
 	std::vector<Node> newNodes(numNodes);
 
 	std::string newEvaluatorName;
-	std::getline(inFile, newEvaluatorName);
+	inFile >> newEvaluatorName;
 	if (NetworkEvaluators::evaluators.count(newEvaluatorName) != 1) {
 		std::string err = "Invalid evaluator name: ";
 		err.append(newEvaluatorName);
